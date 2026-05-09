@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,9 +16,12 @@ class PostListScreen extends StatefulWidget {
 }
 
 class _PostListScreenState extends State<PostListScreen> {
+  static const _searchDelay = Duration(milliseconds: 300);
+
   final _searchController = TextEditingController();
   final Set<int> _selectedPostIds = {};
   List<Post> _posts = [];
+  Timer? _searchDebounce;
   bool _isLoading = true;
 
   bool get _isSelecting => _selectedPostIds.isNotEmpty;
@@ -30,8 +34,14 @@ class _PostListScreenState extends State<PostListScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _queueSearch() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(_searchDelay, _loadPosts);
   }
 
   Future<void> _loadPosts() async {
@@ -173,7 +183,7 @@ class _PostListScreenState extends State<PostListScreen> {
                       ),
                 border: const OutlineInputBorder(),
               ),
-              onChanged: (_) => _loadPosts(),
+              onChanged: (_) => _queueSearch(),
             ),
           ),
           Expanded(

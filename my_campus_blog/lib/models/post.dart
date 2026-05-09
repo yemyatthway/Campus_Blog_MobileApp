@@ -15,25 +15,6 @@ class Post {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  Post copyWith({
-    int? id,
-    String? title,
-    String? content,
-    String? imagePath,
-    bool clearImage = false,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return Post(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      imagePath: clearImage ? null : imagePath ?? this.imagePath,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
   Map<String, Object?> toMap() {
     return {
       'id': id,
