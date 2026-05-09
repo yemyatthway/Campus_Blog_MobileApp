@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../config/post_options.dart';
 import '../database/database_helper.dart';
 import '../models/post.dart';
 
@@ -22,6 +23,7 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _imagePicker = ImagePicker();
+  String _selectedCategory = postCategories.first.name;
   String? _imagePath;
   bool _isSaving = false;
 
@@ -34,6 +36,7 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
     if (post != null) {
       _titleController.text = post.title;
       _contentController.text = post.content;
+      _selectedCategory = post.category;
       _imagePath = post.imagePath;
     }
   }
@@ -87,6 +90,7 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
       id: existingPost?.id,
       title: _titleController.text.trim(),
       content: _contentController.text.trim(),
+      category: _selectedCategory,
       imagePath: _imagePath,
       createdAt: existingPost?.createdAt ?? now,
       updatedAt: now,
@@ -102,7 +106,7 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
       return;
     }
 
-    Navigator.pop(context, true);
+    Navigator.pop(context, _isEditing ? 'updated' : 'created');
   }
 
   @override
@@ -114,6 +118,18 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Text(
+              _isEditing ? 'Update your blog entry' : 'Create a new blog entry',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add text, choose a category, and attach a photo if needed.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -126,6 +142,36 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
                   return 'Enter a title';
                 }
                 return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                prefixIcon: Icon(Icons.sell_outlined),
+              ),
+              items: postCategories
+                  .map(
+                    (category) => DropdownMenuItem(
+                      value: category.name,
+                      child: Row(
+                        children: [
+                          Icon(category.icon, color: category.color, size: 20),
+                          const SizedBox(width: 10),
+                          Text(category.name),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() {
+                  _selectedCategory = value;
+                });
               },
             ),
             const SizedBox(height: 14),
@@ -147,17 +193,13 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
             ),
             const SizedBox(height: 16),
             if (_imagePath == null)
-              OutlinedButton.icon(
-                onPressed: () => _showImageOptions(context),
-                icon: const Icon(Icons.add_photo_alternate),
-                label: const Text('Attach image'),
-              )
+              _ImagePlaceholder(onTap: () => _showImageOptions(context))
             else
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.file(
                       File(_imagePath!),
                       height: 220,
@@ -221,6 +263,45 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: Theme.of(
+            context,
+          ).colorScheme.primaryContainer.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate,
+              size: 40,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Attach image from camera or gallery',
+              style: Theme.of(context).textTheme.titleSmall,
             ),
           ],
         ),

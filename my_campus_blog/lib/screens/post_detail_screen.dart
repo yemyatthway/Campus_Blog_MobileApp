@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../config/post_options.dart';
 import '../database/database_helper.dart';
 import '../models/post.dart';
 import 'add_edit_post_screen.dart';
@@ -46,13 +47,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       return;
     }
 
-    final saved = await Navigator.of(context).push<bool>(
+    final saved = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => AddEditPostScreen(post: post)),
     );
 
-    if (saved == true) {
+    if (saved == 'updated') {
       _changed = true;
       await _loadPost();
+
+      if (!mounted) {
+        return;
+      }
+
+      _showSnackBar('Post updated successfully.');
     }
   }
 
@@ -90,7 +97,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       return;
     }
 
-    Navigator.pop(context, true);
+    Navigator.pop(context, 'deleted');
   }
 
   Future<void> _sharePost() async {
@@ -109,6 +116,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         ShareParams(text: text, files: [XFile(imagePath)]),
       );
     }
+
+    if (!mounted) {
+      return;
+    }
+
+    _showSnackBar('Share sheet opened.');
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -119,7 +138,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         if (didPop) {
           return;
         }
-        Navigator.pop(context, _changed);
+        Navigator.pop(context, _changed ? 'updated' : null);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -160,25 +179,47 @@ class _PostDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imagePath = post.imagePath;
+    final category = categoryForName(post.category);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         if (imagePath != null) ...[
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.file(File(imagePath), height: 260, fit: BoxFit.cover),
+            borderRadius: BorderRadius.circular(16),
+            child: Image.file(File(imagePath), height: 280, fit: BoxFit.cover),
           ),
           const SizedBox(height: 18),
         ],
-        Text(post.title, style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(
-          'Updated ${_formatDate(post.updatedAt)}',
-          style: Theme.of(context).textTheme.bodySmall,
+        Row(
+          children: [
+            _CategoryBadge(category: category),
+            const Spacer(),
+            Text(
+              'Updated ${_formatDate(post.updatedAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
-        const Divider(height: 28),
-        Text(post.content, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: 14),
+        Text(
+          post.title,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 14),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              post.content,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(height: 1.45),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -189,5 +230,36 @@ class _PostDetail extends StatelessWidget {
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     return '${date.year}-$month-$day $hour:$minute';
+  }
+}
+
+class _CategoryBadge extends StatelessWidget {
+  const _CategoryBadge({required this.category});
+
+  final PostCategory category;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: category.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(category.icon, size: 16, color: category.color),
+          const SizedBox(width: 6),
+          Text(
+            category.name,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: category.color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

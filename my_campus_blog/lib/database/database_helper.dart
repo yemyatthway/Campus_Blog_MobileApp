@@ -1,6 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../config/post_options.dart';
 import '../models/post.dart';
 
 class DatabaseHelper {
@@ -8,7 +9,7 @@ class DatabaseHelper {
 
   static final DatabaseHelper instance = DatabaseHelper._();
   static const _databaseName = 'my_campus_blog.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
   static const postsTable = 'posts';
 
   Database? _database;
@@ -24,6 +25,7 @@ class DatabaseHelper {
       path,
       version: _databaseVersion,
       onCreate: _createDatabase,
+      onUpgrade: _upgradeDatabase,
     );
     return _database!;
   }
@@ -34,11 +36,24 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'General',
         imagePath TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _upgradeDatabase(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        "ALTER TABLE $postsTable ADD COLUMN category TEXT NOT NULL DEFAULT 'General'",
+      );
+    }
   }
 
   Future<int> insertPost(Post post) async {
@@ -56,17 +71,31 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<Post>> getPosts({String query = ''}) async {
+  Future<List<Post>> getPosts({
+    String query = '',
+    String? category,
+    PostSortOption sortOption = PostSortOption.newest,
+  }) async {
     final db = await database;
     final trimmedQuery = query.trim();
+    final whereParts = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (trimmedQuery.isNotEmpty) {
+      whereParts.add('(title LIKE ? OR content LIKE ?)');
+      whereArgs.addAll(['%$trimmedQuery%', '%$trimmedQuery%']);
+    }
+
+    if (category != null && category.isNotEmpty) {
+      whereParts.add('category = ?');
+      whereArgs.add(category);
+    }
 
     final maps = await db.query(
       postsTable,
-      where: trimmedQuery.isEmpty ? null : 'title LIKE ? OR content LIKE ?',
-      whereArgs: trimmedQuery.isEmpty
-          ? null
-          : ['%$trimmedQuery%', '%$trimmedQuery%'],
-      orderBy: 'updatedAt DESC',
+      where: whereParts.isEmpty ? null : whereParts.join(' AND '),
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
+      orderBy: sortOption.orderBy,
     );
 
     return maps.map(Post.fromMap).toList();

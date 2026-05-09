@@ -3,6 +3,7 @@ class Post {
     this.id,
     required this.title,
     required this.content,
+    required this.category,
     this.imagePath,
     required this.createdAt,
     required this.updatedAt,
@@ -11,6 +12,7 @@ class Post {
   final int? id;
   final String title;
   final String content;
+  final String category;
   final String? imagePath;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -20,6 +22,7 @@ class Post {
       'id': id,
       'title': title,
       'content': content,
+      'category': category,
       'imagePath': imagePath,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -31,6 +34,7 @@ class Post {
       id: map['id'] as int?,
       title: map['title'] as String,
       content: map['content'] as String,
+      category: (map['category'] as String?) ?? 'General',
       imagePath: map['imagePath'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
