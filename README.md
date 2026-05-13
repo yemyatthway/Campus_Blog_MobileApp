@@ -2,7 +2,7 @@
 
 The app works as an offline blog/social message client where users can create, store, search, edit, delete, attach images to, and share personal posts.
 
-## Coursework Features
+## Features
 
 - Create text-based blog posts.
 - Edit existing posts.
